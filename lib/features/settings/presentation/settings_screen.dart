@@ -3,16 +3,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_theme.dart';
+import '../../../core/logging/error_logger_provider.dart';
+import '../../../core/notifications/notification_providers.dart';
 import '../domain/app_settings.dart';
 import '../state/settings_controller.dart';
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  late Future<bool?> _exactAlarmFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _exactAlarmFuture = ref.read(localNotificationsServiceProvider).canScheduleExactAlarms();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final settings = ref.watch(settingsControllerProvider).valueOrNull ?? const AppSettings();
     final controller = ref.read(settingsControllerProvider.notifier);
+    final latestErrors = ref.read(appErrorLoggerProvider).latest(limit: 5);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Paramètres & Personnalisation')),
@@ -60,6 +76,93 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('Rappels activés'),
             onChanged: controller.setNotifications,
           ),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: FutureBuilder<bool?>(
+                future: _exactAlarmFuture,
+                builder: (context, snapshot) {
+                  final canExact = snapshot.data;
+                  final isUnknown = canExact == null;
+                  final isGranted = canExact == true;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Alarmes exactes Android', style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 6),
+                      Text(
+                        isUnknown
+                            ? 'Statut non disponible sur cet appareil.'
+                            : isGranted
+                                ? 'Autorisé: les rappels précis sont actifs.'
+                                : 'Non autorisé: BloomList utilise un mode de rappel approximatif.',
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                              final granted = await ref
+                                  .read(localNotificationsServiceProvider)
+                                  .requestExactAlarmPermission();
+                              setState(() {
+                                _exactAlarmFuture = ref
+                                    .read(localNotificationsServiceProvider)
+                                    .canScheduleExactAlarms();
+                              });
+                              if (!context.mounted) {
+                                return;
+                              }
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    granted
+                                        ? 'Alarme exacte autorisée.'
+                                        : 'Permission non accordée, fallback activé.',
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.alarm_on_rounded),
+                            label: const Text('Activer alarmes exactes'),
+                          ),
+                          TextButton(
+                            onPressed: () => setState(() {
+                              _exactAlarmFuture = ref
+                                  .read(localNotificationsServiceProvider)
+                                  .canScheduleExactAlarms();
+                            }),
+                            child: const Text('Actualiser'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+          if (latestErrors.isNotEmpty)
+            Card(
+              child: ExpansionTile(
+                title: const Text('Journal de fiabilité'),
+                subtitle: const Text('Dernières erreurs capturées localement'),
+                children: latestErrors
+                    .map(
+                      (entry) => ListTile(
+                        dense: true,
+                        title: Text(
+                          entry.split('\n').first,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
           const Divider(height: 24),
           Text('Durées Pomodoro', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),

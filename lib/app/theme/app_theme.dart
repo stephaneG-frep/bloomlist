@@ -11,11 +11,41 @@ class BloomPalette {
 }
 
 class BloomTheme {
+  static TextTheme _harmonizedTextTheme(TextTheme base, Color onSurface) {
+    return base.copyWith(
+      headlineLarge: base.headlineLarge?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.4),
+      headlineMedium: base.headlineMedium?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.2),
+      headlineSmall: base.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+      titleLarge: base.titleLarge?.copyWith(fontWeight: FontWeight.w700, letterSpacing: 0.1),
+      titleMedium: base.titleMedium?.copyWith(fontWeight: FontWeight.w600, letterSpacing: 0.1),
+      bodyLarge: base.bodyLarge?.copyWith(height: 1.35),
+      bodyMedium: base.bodyMedium?.copyWith(height: 1.35),
+      labelLarge: base.labelLarge?.copyWith(fontWeight: FontWeight.w700, letterSpacing: 0.2),
+    ).apply(
+      bodyColor: onSurface,
+      displayColor: onSurface,
+    );
+  }
+
+  static PageTransitionsTheme _transitions() {
+    return const PageTransitionsTheme(
+      builders: {
+        TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
+        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.linux: FadeForwardsPageTransitionsBuilder(),
+        TargetPlatform.windows: FadeForwardsPageTransitionsBuilder(),
+      },
+    );
+  }
+
   static ThemeData light(Color seed) {
     final scheme = ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light);
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
+      textTheme: _harmonizedTextTheme(ThemeData(brightness: Brightness.light).textTheme, scheme.onSurface),
+      pageTransitionsTheme: _transitions(),
       scaffoldBackgroundColor: const Color(0xFFF6F8FC),
       cardTheme: CardThemeData(
         elevation: 0,
@@ -42,6 +72,8 @@ class BloomTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
+      textTheme: _harmonizedTextTheme(ThemeData(brightness: Brightness.dark).textTheme, scheme.onSurface),
+      pageTransitionsTheme: _transitions(),
       scaffoldBackgroundColor: const Color(0xFF0C111B),
       cardTheme: CardThemeData(
         elevation: 0,

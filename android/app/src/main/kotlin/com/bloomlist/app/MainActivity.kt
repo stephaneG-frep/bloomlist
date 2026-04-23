@@ -1,4 +1,4 @@
-package com.example.dockflow_learn
+package com.bloomlist.app
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -17,53 +17,6 @@ class TasksListScreen extends ConsumerStatefulWidget {
 class _TasksListScreenState extends ConsumerState<TasksListScreen> {
   int _segment = 0;
 
-  Future<void> _showCompletionPulse() async {
-    Future<void>.delayed(const Duration(milliseconds: 750), () {
-      if (mounted && Navigator.of(context, rootNavigator: true).canPop()) {
-        Navigator.of(context, rootNavigator: true).pop();
-      }
-    });
-    await showGeneralDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'done',
-      transitionDuration: const Duration(milliseconds: 250),
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return const SizedBox.shrink();
-      },
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutBack);
-        return Stack(
-          children: [
-            Positioned.fill(
-              child: Container(color: Colors.black.withValues(alpha: 0.15)),
-            ),
-            Center(
-              child: ScaleTransition(
-                scale: Tween<double>(begin: 0.8, end: 1.0).animate(curved),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.check_circle_rounded, color: Colors.green, size: 28),
-                      SizedBox(width: 10),
-                      Text('Tâche terminée'),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final allTasks = ref.watch(allTasksProvider);
@@ -102,15 +55,35 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: SegmentedButton<int>(
-                  segments: const [
-                    ButtonSegment(value: 0, label: Text('Toutes')),
-                    ButtonSegment(value: 1, label: Text('Aujourd\'hui')),
-                    ButtonSegment(value: 2, label: Text('Semaine')),
-                    ButtonSegment(value: 3, label: Text('Rapides')),
-                  ],
-                  selected: {_segment},
-                  onSelectionChanged: (set) => setState(() => _segment = set.first),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _FilterChip(
+                        label: 'Toutes',
+                        selected: _segment == 0,
+                        onTap: () => setState(() => _segment = 0),
+                      ),
+                      const SizedBox(width: 8),
+                      _FilterChip(
+                        label: 'Aujourd\'hui',
+                        selected: _segment == 1,
+                        onTap: () => setState(() => _segment = 1),
+                      ),
+                      const SizedBox(width: 8),
+                      _FilterChip(
+                        label: 'Semaine',
+                        selected: _segment == 2,
+                        onTap: () => setState(() => _segment = 2),
+                      ),
+                      const SizedBox(width: 8),
+                      _FilterChip(
+                        label: 'Rapides',
+                        selected: _segment == 3,
+                        onTap: () => setState(() => _segment = 3),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -136,13 +109,56 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
                         if (!context.mounted || status != TaskStatus.done) {
                           return;
                         }
-                        await _showCompletionPulse();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Tâche terminée')),
+                        );
                       },
                     );
                   },
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(999),
+          color: selected ? scheme.primaryContainer : scheme.surface,
+          border: Border.all(
+            color: selected ? scheme.primary : scheme.outlineVariant,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.1,
+            color: selected ? scheme.onPrimaryContainer : scheme.onSurface,
+          ),
         ),
       ),
     );

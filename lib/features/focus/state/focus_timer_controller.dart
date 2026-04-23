@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/notifications/notification_providers.dart';
+
 class FocusTimerState {
   const FocusTimerState({
     required this.totalSeconds,
@@ -57,6 +59,7 @@ class FocusTimerController extends Notifier<FocusTimerState> {
       if (state.remainingSeconds <= 1) {
         _timer?.cancel();
         state = state.copyWith(remainingSeconds: 0, isRunning: false);
+        ref.read(localNotificationsServiceProvider).showPomodoroCompleted();
       } else {
         state = state.copyWith(remainingSeconds: state.remainingSeconds - 1);
       }

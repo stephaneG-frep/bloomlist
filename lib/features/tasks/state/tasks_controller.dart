@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/notifications/notification_providers.dart';
 import '../../../core/storage/storage_providers.dart';
 import '../domain/task_item.dart';
 
@@ -14,6 +15,15 @@ class TasksController extends AsyncNotifier<List<TaskItem>> {
 
   Future<void> upsertTask(TaskItem task) async {
     await ref.read(localDataSourceProvider).saveTask(task);
+    if (task.reminderAt != null && !task.isDone) {
+      await ref.read(localNotificationsServiceProvider).scheduleTaskReminder(
+            taskId: task.id,
+            title: task.title,
+            reminderAt: task.reminderAt!,
+          );
+    } else {
+      await ref.read(localNotificationsServiceProvider).cancelTaskReminder(task.id);
+    }
     final current = [...(state.value ?? <TaskItem>[])];
     final index = current.indexWhere((item) => item.id == task.id);
     if (index == -1) {
@@ -61,6 +71,7 @@ class TasksController extends AsyncNotifier<List<TaskItem>> {
 
   Future<void> deleteTask(String id) async {
     await ref.read(localDataSourceProvider).removeTask(id);
+    await ref.read(localNotificationsServiceProvider).cancelTaskReminder(id);
     state = AsyncData((state.value ?? <TaskItem>[]).where((task) => task.id != id).toList());
   }
 
